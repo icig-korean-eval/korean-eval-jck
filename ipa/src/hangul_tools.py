@@ -50,6 +50,7 @@ def hangul_to_jamos(hangul: str) -> list:
     # hangul: str. multiple korean letters like 가나다라마바사
     syllables = list(hangul)
     r = []
+    idx = []
 
     for letter in syllables:
         if bool(re.match(r'^[가-힣]+$', letter)):     # if letter is a hangul character
@@ -62,7 +63,6 @@ def hangul_to_jamos(hangul: str) -> list:
         else:   # if letter is NOT a hangul character
             syllable = letter
         r.append(syllable)
-
     return r
 
 

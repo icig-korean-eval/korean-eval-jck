@@ -72,7 +72,7 @@ def palatalize(word: Word) -> str:
     }
     hangul_syllables = list(word.hangul)
     to_jamo_bound = word.to_jamo
-    syllables_in_jamo = [to_jamo_bound(syl) for syl in hangul_syllables]
+    syllables_in_jamo = [to_jamo_bound(syl)[0] for syl in hangul_syllables]
     for i, syllable in enumerate(syllables_in_jamo):
         try:
             next_syllable = syllables_in_jamo[i + 1]
@@ -86,15 +86,15 @@ def palatalize(word: Word) -> str:
 
 
 def aspirate(word: Word) -> str:
-    return CT_aspiration.sub(word.jamo)
+    return CT_aspiration.sub(word.jamo, word.jamo_idx)
 
 
 def assimilate(word: Word) -> str:
-    return CT_assimilation.sub(word.jamo)
+    return CT_assimilation.sub(word.jamo, word.jamo_idx)
 
 
 def pot(word: Word) -> str:
-    return CT_tensification.sub(word.jamo)
+    return CT_tensification.sub(word.jamo, word.jamo_idx)
 
 
 def neutralize(word: Word) -> str:
@@ -116,19 +116,25 @@ def delete_h(word: Word) -> str:
         succeeding = word.jamo[h_location + 1]
         if preceding in SONORANTS and succeeding in SONORANTS:
             word.jamo = word.jamo[:h_location] + word.jamo[h_location + 1:]
+            del word.jamo_idx[h_location]
     return word.jamo
 
 
 def simplify_coda(input_word: Word, word_final: bool = False) -> Word:
-    def simplify(jamo: str, loc: int) -> str:
+    def simplify(jamo: str, jamo_idx: list, loc: int) -> str:
         # coda cluster simplification
 
         list_jamo = list(jamo)
+        
         before = ''.join(list_jamo[:loc + 1])
         double_coda = ''.join(list_jamo[loc + 1:loc + 3])
         after = ''.join(list_jamo[loc + 3:])
 
         converted = CT_double_codas.apply(text=double_coda, find_in='_separated')
+        idx = len(double_coda) - len(converted)
+        while idx > 0:
+            del jamo_idx[loc + 1]
+            idx -= 1
         return before + converted + after
 
     while True:
@@ -137,14 +143,14 @@ def simplify_coda(input_word: Word, word_final: bool = False) -> Word:
             break  # if no, exit while-loop
 
         cc = double_coda_loc[0]  # work on the leftest CCC
-        new_jamo = simplify(input_word.jamo, cc)
+        new_jamo = simplify(input_word.jamo, input_word.jamo_idx, cc)
         input_word.jamo = new_jamo
 
     # additionally, simplify word-final consonant cluster
     final_CC = get_substring_ind(input_word.cv, 'CC$')
     if len(final_CC) > 0:
         cc = final_CC[0] - 1
-        new_jamo = simplify(input_word.jamo, cc)
+        new_jamo = simplify(input_word.jamo, input_word.jamo_idx, cc)
         input_word.jamo = new_jamo
     return input_word
 

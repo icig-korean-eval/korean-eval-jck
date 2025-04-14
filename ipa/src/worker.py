@@ -52,7 +52,7 @@ def sanitize(word: str) -> str:
     if len(word) < 1:  # if empty input, no sanitize
         return word
 
-    word = word.replace(' ', '')
+    # word = word.replace(' ', '')
 
     hanja_idx = [match.start() for match in re.finditer(r'\p{Han}', word)]
     if len(hanja_idx) == 0:  # if no hanja, no sanitize
@@ -66,23 +66,57 @@ def sanitize(word: str) -> str:
 def convert(hangul: str,
             rules_to_apply: str = 'pastcnhovr',
             convention: str = 'ipa',
-            sep: str = '') -> str:
+            sep: str = '',
+            vebose=False) -> dict:
     # the main function for IPA conversion
+    if vebose:
+        print(f"original: {hangul}")
 
     if len(hangul) < 1:  # if no content, then return no content
         return ""
+    
+    original = hangul
+    
+    idx_to_str = dict()
+    str_to_idx = []
+    idx = 1
+    for letter in hangul:
+        if bool(re.match(r'^[가-힣]+$', letter)):
+            str_to_idx.append(idx)
+            idx_to_str[idx] = letter
+            idx += 1
+        else:
+            str_to_idx.append(letter)
+    if vebose:
+        print(f'idx_to_str: {idx_to_str}')
+        print(f'str_to_idx: {str_to_idx}')
 
     # prepare
     rules_to_apply = rules_to_apply.lower()
     CT_convention = transcription_convention(convention)
     hangul = sanitize(hangul)
     word = Word(hangul=hangul)
+    if vebose:
+        print(f'hangul: {hangul}')
+        print(f'word jamo: {word.jamo}')
+        print(f'word jamo idx: {word.jamo_idx}')
+        print(f'word cv: {word.cv}')
+        print()
 
     # resolve word-final consonant clusters right off the bat
     rules.simplify_coda(word)
+    if vebose:
+        print(f'simplify word jamo: {word.jamo}')
+        print(f'simplify word jamo idx: {word.jamo_idx}')
+        print(f'simplify word cv: {word.cv}')
+        print()
 
     # apply rules
     word = rules.apply_rules(word, rules_to_apply)
+    if vebose:
+        print(f'rules word jamo: {word.jamo}')
+        print(f'rules word cv: {word.cv}')
+        print()
 
     # high mid/back vowel merger after bilabial (only for the Yale convention)
     if CT_convention.name == 'yale' and 'u' in rules_to_apply:
@@ -92,15 +126,48 @@ def convert(hangul: str,
             if jamo in bilabials and word.jamo[i+1] == "ㅜ":
                 applied[i+1] = "ㅡ"
         word.jamo = ''.join(applied)
+    # print(f'CT_convention: {CT_convention}')
+    # print()
 
     # convert to IPA or Yale
     transcribed = rules.transcribe(word.jamo, CT_convention)
+    if vebose:
+        print(f'transcribed: {transcribed}')
+        print()
+        print()
 
     # apply phonetic rules
     if CT_convention.name == 'ipa':
         transcribed = rules.apply_phonetics(transcribed, rules_to_apply)
+    if vebose:
+        print(f'transcribed ipa: {transcribed}')
+        print()
+        
+    result = dict()
+    result['original'] = original
+    # result['result'] = sep.join(transcribed)
+    
+    idx = 0
+    result['words'] = dict()
+    for k, v in idx_to_str.items():
+        result['words'][k] = dict()
+        result['words'][k]['value'] = v
+        result['words'][k]['syllables'] = dict()
+        result['words'][k]['syllables']['jamo'] = []
+        result['words'][k]['syllables']['transcript'] = []
+        while idx < len(word.jamo_idx) and word.jamo_idx[idx] == k:
+            result['words'][k]['syllables']['jamo'].append(word.jamo[idx])
+            result['words'][k]['syllables']['transcript'].append(transcribed[idx])
+            idx += 1
+    
+    result['result'] = ''
+    for s in str_to_idx:
+        if isinstance(s, int):
+            result['result'] += ''.join(result['words'][s]['syllables']['transcript'])
+        else:
+            result['result'] += s
 
-    return sep.join(transcribed)
+    return result
 
 
 def convert_many(long_content: str,

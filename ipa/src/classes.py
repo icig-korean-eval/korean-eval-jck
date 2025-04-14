@@ -30,6 +30,8 @@ import regex as re
 from ipa.src.hangul_tools import hangul_to_jamos
 from pathlib import Path
 
+from typing import Tuple, List
+
 
 class ConversionTable:
     def __init__(self, name):
@@ -60,10 +62,17 @@ class ConversionTable:
         except (AttributeError, ValueError):
             return text
 
-    def sub(self, text: str, find_in: str = '_from') -> str:
+    def sub(self, text: str, idx_list: List[int], find_in: str = '_from') -> Tuple[str, List[int]]:
         from_tuple = getattr(self, find_in)
         for index, item in enumerate(from_tuple):
+            positions = [match.start() for match in re.finditer(re.escape(item), text)]
+            if len(positions) == 0: continue
             text = text.replace(item, self._to[index])
+            for i in range(len(positions) - 1, -1, -1):
+                idx = len(item) - len(self._to[index])
+                while idx > 0:
+                    del idx_list[positions[i]]
+                    idx -= 1
         return text
 
     def safe_index(self, attribute, element):
@@ -81,12 +90,16 @@ class Word:
     def __init__(self, hangul):
         # word to convert
         self.hangul = hangul
-        self._jamo = self.to_jamo(hangul)
+        self._jamo, self._jamo_idx = self.to_jamo(hangul)
         self._cv = self.mark_CV(self.jamo)
 
     @property
     def jamo(self):
         return self._jamo
+
+    @property
+    def jamo_idx(self):
+        return self._jamo_idx
 
     @jamo.setter
     def jamo(self, value):
@@ -96,6 +109,8 @@ class Word:
     @property
     def cv(self):
         return self._cv
+    
+    # def word_idx(self, hangul: str) -> str:
 
     def mark_CV(self, jamo: str, convention: ConversionTable = None) -> str:
         # identify each element in jamo as either consonant or vowel
@@ -129,8 +144,11 @@ class Word:
         if sboundary:
             # not implemented
             pass
-
-        return ''.join(jamo_forms)
+        
+        jamo_idx = []
+        for j in range(1, len(jamo_forms) + 1):
+            jamo_idx.extend([j] * len(jamo_forms[j - 1]))
+        return ''.join(jamo_forms), jamo_idx
 
     def remove_empty_onset(self, syllables: list[str]) -> list:
         r = []
