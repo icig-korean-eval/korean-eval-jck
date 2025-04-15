@@ -13,7 +13,7 @@ if __name__ == "__main__":
         "학생들이 책상을 정리했다.", # 공명음 사이 장애음 유성음화
     ]
     for o in original:
-        result = convert(o, sep=' ', vebose=False)
+        result = convert(o, rules_to_apply='pastcnovr', sep=' ', vebose=False)
         print(f'original: {o}\nresult: {result['result']}')
         print()
         
