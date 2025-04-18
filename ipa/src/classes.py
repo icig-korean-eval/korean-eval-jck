@@ -106,6 +106,10 @@ class Word:
         self._jamo = value
         self._cv = self.mark_CV(self._jamo)
 
+    @jamo_idx.setter
+    def jamo_idx(self, value):
+        self._jamo_idx = value
+
     @property
     def cv(self):
         return self._cv

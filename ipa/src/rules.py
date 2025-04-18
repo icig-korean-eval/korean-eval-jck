@@ -70,19 +70,26 @@ def palatalize(word: Word) -> str:
         'ㄷ': 'ㅈ',
         'ㅌ': 'ㅊ'
     }
-    hangul_syllables = list(word.hangul)
+    not_hangul = r'[^가-힣ㄱ-ㅎㅏ-ㅣ]'
+    cleaned_hangul = re.sub(not_hangul, '', word.hangul) 
+        
+    hangul_syllables = list(cleaned_hangul)
     to_jamo_bound = word.to_jamo
     syllables_in_jamo = [to_jamo_bound(syl)[0] for syl in hangul_syllables]
+    new_idx = []
     for i, syllable in enumerate(syllables_in_jamo):
+        print(syllable)
         try:
             next_syllable = syllables_in_jamo[i + 1]
             if next_syllable[0] == 'ㅣ':
                 new_coda = palatalization_table.get(syllable[-1], syllable[-1])
                 syllables_in_jamo[i] = ''.join(list(syllables_in_jamo[i])[:-1] + [new_coda])
         except IndexError:
-            continue
+            pass
+        new_idx.extend([i + 1] * len(syllables_in_jamo[i]))
     new_jamo = ''.join(syllables_in_jamo)
-    return new_jamo
+    print(new_idx)
+    return new_jamo, new_idx
 
 
 def aspirate(word: Word) -> str:
@@ -141,6 +148,8 @@ def simplify_coda(input_word: Word, word_final: bool = False) -> Word:
         double_coda_loc = get_substring_ind(input_word.cv, 'VCCC')  # get all CCC location
         if len(double_coda_loc) == 0:
             break  # if no, exit while-loop
+        # print(input_word.jamo[double_coda_loc[0]:double_coda_loc[0] + 4])
+        # print(input_word.cv[double_coda_loc[0]:double_coda_loc[0] + 4])
 
         cc = double_coda_loc[0]  # work on the leftest CCC
         new_jamo = simplify(input_word.jamo, input_word.jamo_idx, cc)
@@ -230,22 +239,33 @@ def apply_rules(word: Word, rules_to_apply: str = 'pastcnhovr') -> Word:
     # intersonorant Obstruent (V)oicing: 공명음 사이 장애음 유성음화
 
     # apply palatalization
+    print(1, word.jamo)
+    print(word.cv)
     if 'p' in rules_to_apply and ('ㄷㅣ' in word.jamo or 'ㅌㅣ' in word.jamo):
-        word.jamo = palatalize(word)
+        word.jamo, word.jamo_idx = palatalize(word)
+        word = simplify_coda(word)
 
     # apply aspiration
+    print(2, word.jamo)
+    print(word.cv)
     if 'a' in rules_to_apply and 'ㅎ' in word.jamo:
         word.jamo = aspirate(word)
 
     # apply place assimilation
+    print(3, word.jamo)
+    print(word.cv)
     if 's' in rules_to_apply:
         word.jamo = assimilate(word)
 
     # apply post-obstruent tensification
+    print(4, word.jamo)
+    print(word.cv)
     if 't' in rules_to_apply and any(jm in word.jamo for jm in OBSTRUENTS):
         word.jamo = pot(word)
 
     # apply complex coda simplification
+    print(5, word.jamo)
+    print(word.cv)
     if 'c' in rules_to_apply:
         word = simplify_coda(word)
 
