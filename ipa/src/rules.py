@@ -78,7 +78,7 @@ def palatalize(word: Word) -> str:
     syllables_in_jamo = [to_jamo_bound(syl)[0] for syl in hangul_syllables]
     new_idx = []
     for i, syllable in enumerate(syllables_in_jamo):
-        print(syllable)
+        # print(syllable)
         try:
             next_syllable = syllables_in_jamo[i + 1]
             if next_syllable[0] == 'ㅣ':
@@ -88,7 +88,7 @@ def palatalize(word: Word) -> str:
             pass
         new_idx.extend([i + 1] * len(syllables_in_jamo[i]))
     new_jamo = ''.join(syllables_in_jamo)
-    print(new_idx)
+    # print(new_idx)
     return new_jamo, new_idx
 
 
@@ -239,33 +239,33 @@ def apply_rules(word: Word, rules_to_apply: str = 'pastcnhovr') -> Word:
     # intersonorant Obstruent (V)oicing: 공명음 사이 장애음 유성음화
 
     # apply palatalization
-    print(1, word.jamo)
-    print(word.cv)
+    # print(1, word.jamo)
+    # print(word.cv)
     if 'p' in rules_to_apply and ('ㄷㅣ' in word.jamo or 'ㅌㅣ' in word.jamo):
         word.jamo, word.jamo_idx = palatalize(word)
         word = simplify_coda(word)
 
     # apply aspiration
-    print(2, word.jamo)
-    print(word.cv)
+    # print(2, word.jamo)
+    # print(word.cv)
     if 'a' in rules_to_apply and 'ㅎ' in word.jamo:
         word.jamo = aspirate(word)
 
     # apply place assimilation
-    print(3, word.jamo)
-    print(word.cv)
+    # print(3, word.jamo)
+    # print(word.cv)
     if 's' in rules_to_apply:
         word.jamo = assimilate(word)
 
     # apply post-obstruent tensification
-    print(4, word.jamo)
-    print(word.cv)
+    # print(4, word.jamo)
+    # print(word.cv)
     if 't' in rules_to_apply and any(jm in word.jamo for jm in OBSTRUENTS):
         word.jamo = pot(word)
 
     # apply complex coda simplification
-    print(5, word.jamo)
-    print(word.cv)
+    # print(5, word.jamo)
+    # print(word.cv)
     if 'c' in rules_to_apply:
         word = simplify_coda(word)
 
