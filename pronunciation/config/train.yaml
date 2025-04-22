@@ -1,0 +1,4 @@
+log:
+  name: "ctc"
+  stream: true
+  file: true
