@@ -1,0 +1,115 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [],
+  "normalizer": null,
+  "pre_tokenizer": {
+    "type": "Whitespace"
+  },
+  "post_processor": {
+    "type": "TemplateProcessing",
+    "single": [
+      {
+        "SpecialToken": {
+          "id": "<s>",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "</s>",
+          "type_id": 0
+        }
+      }
+    ],
+    "pair": [
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "B",
+          "type_id": 1
+        }
+      }
+    ],
+    "special_tokens": {
+      "</s>": {
+        "id": "</s>",
+        "ids": [
+          2
+        ],
+        "tokens": [
+          "</s>"
+        ]
+      },
+      "<s>": {
+        "id": "<s>",
+        "ids": [
+          1
+        ],
+        "tokens": [
+          "<s>"
+        ]
+      }
+    }
+  },
+  "decoder": null,
+  "model": {
+    "type": "WordLevel",
+    "vocab": {
+      "<pad>": 0,
+      "<s>": 1,
+      "</s>": 2,
+      "<unk>": 3,
+      " ": 4,
+      "p": 5,
+      "t": 6,
+      "tʰ": 7,
+      "tɕ": 8,
+      "tɕ*": 9,
+      "tɕʰ": 10,
+      "k": 11,
+      "h": 12,
+      "k*": 13,
+      "kʰ": 14,
+      "l": 15,
+      "m": 16,
+      "n": 17,
+      "ŋ": 18,
+      "t*": 19,
+      "p*": 20,
+      "pʰ": 21,
+      "s": 22,
+      "s*": 23,
+      "ɑ": 24,
+      "ɛ": 25,
+      "i": 26,
+      "o": 27,
+      "wɛ": 28,
+      "u": 29,
+      "ʌ": 30,
+      "ɯ": 31,
+      "ɰi": 32,
+      "jo": 33,
+      "ju": 34,
+      "ja": 35,
+      "jʌ": 36,
+      "jɛ": 37,
+      "wa": 38,
+      "wʌ": 39,
+      "wi": 40
+    },
+    "unk_token": "<unk>"
+  }
+}

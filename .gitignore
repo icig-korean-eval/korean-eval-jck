@@ -5,3 +5,6 @@
 /output
 /SpeechFeedback
 /AIHubSpeechPreprocessingTool
+**/save
+**/.vscode
+**/__pycache__/

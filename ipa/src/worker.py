@@ -161,11 +161,15 @@ def convert(hangul: str,
             idx += 1
     
     result['result'] = ''
+    result['result_array'] = []
     for s in str_to_idx:
         if isinstance(s, int):
             result['result'] += ''.join(result['words'][s]['syllables']['transcript'])
+            result['result_array'].extend(result['words'][s]['syllables']['transcript'])
         else:
-            result['result'] += s
+            if s == ' ':
+                result['result'] += s
+                result['result_array'].append(s)
 
     return result
 
