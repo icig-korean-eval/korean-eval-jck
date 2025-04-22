@@ -13,10 +13,10 @@ class DefaultLogger:
         return cls._instance
 
     def __init__(self,
-                 name: str,
-                 stream: bool,
-                 file: bool,
-                 path: str):
+                 name: str = 'main',
+                 stream: bool = True,
+                 file: bool = False,
+                 path: str = './log'):
         if self._initialized: return
 
         self.logger_name = name
@@ -27,6 +27,7 @@ class DefaultLogger:
         if stream:
             formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s")
             handler = logging.StreamHandler()
+            handler.setLevel(logging.DEBUG)
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 

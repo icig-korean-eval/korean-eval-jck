@@ -2,3 +2,35 @@ log:
   name: "ctc"
   stream: true
   file: true
+
+train_dataset:
+  path: "../data/announcer/labeling/preprocessed_train.pickle"
+  audio_path: "../data/announcer/source"
+
+eval_dataset:
+  path: "../data/announcer/labeling/preprocessed_test.pickle"
+  audio_path: "../data/announcer/source"
+
+data_loader:
+  num_workers: 0
+  drop_last: true
+
+batch_size: 10
+total_iter: 600000
+accumulation_steps: 64
+print_steps: 1600
+eval_steps: 24000
+save_steps: 24000
+
+max_queue_size: 50000
+refill_threshold: 1000
+chunk_size: 40000
+
+optimizer_vale:
+  lr: 1.0e-5
+  weight_decay: 5.0e-3
+
+trainer:
+  freeze_feature_extractor: true
+
+vocab_path: "./model/ipa_vocab_auto.json"
