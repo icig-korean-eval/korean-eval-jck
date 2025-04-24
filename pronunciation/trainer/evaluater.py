@@ -3,6 +3,8 @@ import torchaudio
 import transformers
 
 import pandas as pd
+import numpy as np
+import librosa
 
 import os
 from tqdm import tqdm
@@ -25,6 +27,8 @@ class IPAModelEvaluator:
         self.eval_dataset = self.__read_eval_data(path)
         self.eval_audio_path = audio_path
         
+        self.model = self.model.to(device)
+        
         
     def __read_eval_data(self, eval_data_path):
         if eval_data_path is None: return
@@ -40,10 +44,20 @@ class IPAModelEvaluator:
 
         for file, ref_text, _, _ in tqdm(
             self.eval_dataset.itertuples(index=False),
-            desc='eval', total=self.eval_dataset.shape[0]):
-            waveform, sr = torchaudio.load(os.path.join(self.eval_audio_path, file))
-            if sr != 16000:
-                waveform = torchaudio.transforms.Resample(sr, 16000)(waveform)
+            desc='eval', total=self.eval_dataset.shape[0]
+        ):
+            audio_path = os.path.join(self.eval_audio_path, file)
+            if file.endswith('pcm'):
+                audio_path = '.' + audio_path[2:]
+                with open(audio_path, 'rb') as opened_pcm_file:
+                    buf = opened_pcm_file.read()
+                    pcm_data = np.frombuffer(buf, dtype = 'int16')
+                    waveform = librosa.util.buf_to_float(pcm_data)
+                    waveform = torch.tensor(waveform, dtype=torch.float32)
+            else:
+                waveform, sr = torchaudio.load(audio_path)
+                if sr != 16000:
+                    waveform = torchaudio.transforms.Resample(sr, 16000)(waveform)
 
             input_values = self.processor.feature_extractor(
                 waveform.squeeze().numpy(), sampling_rate=16000, return_tensors="pt"
