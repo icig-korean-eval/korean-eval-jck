@@ -52,7 +52,7 @@ def parse_config():
         yaml.safe_dump(config, f)
         
     config['mode'] = args.mode
-    config['device'] = "cuda" if torch.cuda.is_available() else "cpu"
+    config['device'] = "cpu"
     
     return config
 

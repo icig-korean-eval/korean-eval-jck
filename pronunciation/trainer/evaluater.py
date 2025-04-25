@@ -62,7 +62,7 @@ class IPAModelEvaluator:
             references.extend(ref_text)
             
             del input_values, ref_text
-            if iter % 1000 == 0:
+            if iter % 20000 == 0:
                 self.logger.debug(f'[{iter}/{len(self.dataloader)}] eval')
             iter += 1
         
