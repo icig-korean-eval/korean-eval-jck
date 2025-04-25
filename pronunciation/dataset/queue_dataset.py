@@ -12,6 +12,7 @@ import threading
 import time
 
 from logger.logger import DefaultLogger
+from utils.audio import load_soundfile
 
 import typing
 
@@ -19,11 +20,15 @@ import typing
 class StreamingDatasetQueue(IterableDataset):
     def __init__(self,
                  data_path: str,
+                 sound_path_prefix: str,
                  processor: Wav2Vec2Processor,
                  batch_size: int,
+                 x: typing.Optional[str],
+                 y: typing.Optional[str],
                  max_queue_size: int=64,
                  refill_threshold: int=16,
-                 chunk_size: int=64):
+                 chunk_size: int=64,
+                 notify_end=False):
         super().__init__()
         self.logger = DefaultLogger()
         self.processor = processor
@@ -31,19 +36,27 @@ class StreamingDatasetQueue(IterableDataset):
         self.refill_threshold = refill_threshold
         self.chunk_size = chunk_size
         self.batch_size = batch_size
+        
+        self.label_x = x
+        self.label_y = y
+        self.sound_path_prefix = sound_path_prefix
 
         self.data_index = self._load_csv(data_path)
         self.data_len = len(self.data_index)
         self.q = queue.Queue(maxsize=self.max_queue_size)
         self.cursor = 0
         self.lock = threading.Lock()
+        
+        self.notify_end = notify_end
 
         self._start_loading_thread()
 
     def _load_csv(self, path: str) -> typing.List:
-        df = pd.read_pickle(path)  # file, text
-        df["label_len"] = df["script.text.ipa"].apply(len)
-        df = df.sort_values("label_len").drop(columns=["label_len"])
+        df = pd.read_pickle(path)
+        
+        if self.label_y is not None:
+            df["label_len"] = df[self.label_y].apply(len)
+            df = df[df['label_len'] > 3].sort_values("label_len").drop(columns=["label_len"])
         
         total = len(df)
         remainder = total % self.batch_size
@@ -51,28 +64,32 @@ class StreamingDatasetQueue(IterableDataset):
             df = df.iloc[:total - remainder].reset_index(drop=True)
         
         self.logger.info(f'data size: {df.shape}')
-        return list(df.itertuples(index=False, name=None))  # [(file, text), ...]
+        
+        df = df[[self.label_x] + [self.label_y]]
+        
+        return list(df.itertuples(index=False, name=None))
 
     def _load_data(self, file: str,
-                   text: typing.List[str]) -> typing.Optional[typing.Dict]:
-        waveform, sr = torchaudio.load(file)
-        if sr != 16000:
-            waveform = torchaudio.transforms.Resample(sr, 16000)(waveform)
+                   text: typing.List[str] | None) -> typing.Optional[typing.Dict]:
+        data = dict()
+        
+        waveform = load_soundfile(file)
         input_values = self.processor.feature_extractor(
             waveform.squeeze().numpy(), sampling_rate=16000
         ).input_values[0]
-        labels = self.processor.tokenizer(text).input_ids
         
         input_values = torch.tensor(input_values, dtype=torch.float)
-        labels = torch.tensor(labels, dtype=torch.long).squeeze()
+        data['input_values'] = input_values
         
-        if input_values.shape[0] < labels.shape[0]:
-            return
-        
-        return {
-            "input_values": input_values,
-            "labels": labels
-        }
+        if text is not None:
+            data['script'] = ''.join(text)
+            labels = self.processor.tokenizer(text).input_ids
+            labels = torch.tensor(labels, dtype=torch.long).squeeze()
+            
+            data['labels'] = labels
+            if input_values.shape[0] < labels.shape[0]:
+                return
+        return data
 
     def _refill_queue(self):
         self.logger.debug(f'refill data: {self.cursor}\tapproximate remain: {self.q.qsize()}')
@@ -80,14 +97,19 @@ class StreamingDatasetQueue(IterableDataset):
             end = min(self.cursor + self.chunk_size, self.data_len)
             for i in range(self.cursor, end):
                 item = self._load_data(
-                    file=os.path.join('../data/announcer/source', self.data_index[i][0]),
-                    text=self.data_index[i][2]
+                    file=os.path.join(self.sound_path_prefix, self.data_index[i][0]),
+                    text=self.data_index[i][1]
                 )
                 if item is None:
                     self.logger.error(f'length error - idx: {i}')
                     continue
                 self.q.put(item)
-            self.cursor = end if end < self.data_len else 0
+            if end < self.data_len:
+                self.cursor = end
+            else:
+                self.cursor = 0
+                if self.notify_end:
+                    self.q.put('end')
 
     def _start_loading_thread(self):
         def _run():

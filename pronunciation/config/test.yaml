@@ -14,6 +14,11 @@ models:
 eval_dataset:
   path: "../data/korean/preprocessed_test.pickle"
   audio_path: "."
+  x: "soundpath"
+  y: "script.text.ipa_array"
+max_queue_size: 50000
+refill_threshold: 10000
+chunk_size: 40000
 log:
   name: "ctc"
   stream: true

@@ -7,14 +7,22 @@ class IPADataCollator:
         self.processor = processor
 
     def __call__(self, batch):
+        if isinstance(batch[0], str):
+            return batch
+
         input_values = [item["input_values"] for item in batch]
         labels = [item["labels"] for item in batch]
+        scripts = [item["script"] for item in batch]
 
         input_lengths = [len(x) for x in input_values]
         label_lengths = [len(x) for x in labels]
         
         input_values_padded = pad_sequence(input_values, batch_first=True, padding_value=self.processor.feature_extractor.padding_value)
-        labels_padded = pad_sequence(labels, batch_first=True, padding_value=-100)
+        try:
+            labels_padded = pad_sequence(labels, batch_first=True, padding_value=-100)
+        except:
+            print(labels)
+            exit()
 
         attention_mask = torch.zeros_like(input_values_padded).long()
         for i, l in enumerate(input_lengths):
@@ -24,6 +32,7 @@ class IPADataCollator:
             "input_values": input_values_padded,
             "attention_mask": attention_mask,
             "labels": labels_padded,
+            "scripts": scripts,
             "input_lengths": torch.tensor(input_lengths),
             "label_lengths": torch.tensor(label_lengths)
         }

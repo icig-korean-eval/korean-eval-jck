@@ -4,26 +4,30 @@ log:
   file: true
 
 train_dataset:
-  path: "../data/announcer/labeling/preprocessed_train.pickle"
-  audio_path: "../data/announcer/source"
+  path: "../data/korean/preprocessed_train.pickle"
+  audio_path: "."
+  x: "soundpath"
+  y: "script.text.ipa_array"
 
 eval_dataset:
-  path: "../data/announcer/labeling/preprocessed_test.pickle"
-  audio_path: "../data/announcer/source"
+  path: "../data/korean/preprocessed_test.pickle"
+  audio_path: "."
+  x: "soundpath"
+  y: "script.text.ipa_array"
 
 data_loader:
   num_workers: 0
   drop_last: true
 
 batch_size: 10
-total_iter: 600000
+total_iter: 12000000
 accumulation_steps: 64
-print_steps: 1600
-eval_steps: 24000
-save_steps: 24000
+print_steps: 8000
+eval_steps: 80000
+save_steps: 80000
 
 max_queue_size: 50000
-refill_threshold: 1000
+refill_threshold: 10000
 chunk_size: 40000
 
 optimizer_vale:

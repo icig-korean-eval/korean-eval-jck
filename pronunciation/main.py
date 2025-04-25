@@ -75,19 +75,42 @@ if __name__ == "__main__":
         
         logger.info(f'tokens: {tokenizer.get_vocab()}')
         
-        dataset = StreamingDatasetQueue(
+        dataset_train = StreamingDatasetQueue(
             data_path=config['train_dataset']['path'],
+            sound_path_prefix=config['train_dataset']['audio_path'],
             processor=processor,
+            x=config['train_dataset']['x'],
+            y=config['train_dataset']['y'],
             max_queue_size=config['max_queue_size'],
             refill_threshold=config['refill_threshold'],
             chunk_size=config['chunk_size'],
             batch_size=config['batch_size']
         )
-        dataloader = DataLoader(
-            dataset,
+        dataset_eval = StreamingDatasetQueue(
+            data_path=config['eval_dataset']['path'],
+            sound_path_prefix=config['eval_dataset']['audio_path'],
+            processor=processor,
+            x=config['eval_dataset']['x'],
+            y=config['eval_dataset']['y'],
+            max_queue_size=config['max_queue_size'],
+            refill_threshold=config['refill_threshold'],
+            chunk_size=config['chunk_size'],
+            batch_size=1,
+            notify_end=True
+        )
+        
+        dataloader_train = DataLoader(
+            dataset_train,
             batch_size=config['batch_size'],
             num_workers=config['data_loader']['num_workers'],
             drop_last=config['data_loader']['drop_last'],
+            collate_fn=IPADataCollator(processor),
+        )
+        dataloader_eval = DataLoader(
+            dataset_eval,
+            batch_size=1,
+            num_workers=0,
+            drop_last=False,
             collate_fn=IPADataCollator(processor),
         )
         
@@ -107,19 +130,19 @@ if __name__ == "__main__":
         )
         lr_scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=len(dataset) * 2 // config['accumulation_steps'] // config['batch_size'],
+            num_warmup_steps=len(dataset_train) * 2 // config['accumulation_steps'] // config['batch_size'],
             num_training_steps=config['total_iter'] // config['accumulation_steps']
         )
         
         evaluater = IPAModelEvaluator(
+            dataloader=dataloader_eval,
             processor=processor,
             model=model,
             device=config['device'],
-            **config['eval_dataset'],
         )
         
         trainer = IPAModelTrainer(
-            dataloader=dataloader,
+            dataloader=dataloader_train,
             model=model,
             optimizer=optimizer,
             processor=processor,
@@ -138,11 +161,31 @@ if __name__ == "__main__":
             processor = Wav2Vec2Processor.from_pretrained(os.path.join(config['models'][i], 'processor'))
             model = Wav2Vec2ForCTC.from_pretrained(os.path.join(config['models'][i], 'model'))
             
+            dataset_eval = StreamingDatasetQueue(
+                data_path=config['eval_dataset']['path'],
+                sound_path_prefix=config['eval_dataset']['audio_path'],
+                processor=processor,
+                x=config['eval_dataset']['x'],
+                y=config['eval_dataset']['y'],
+                max_queue_size=config['max_queue_size'],
+                refill_threshold=config['refill_threshold'],
+                chunk_size=config['chunk_size'],
+                batch_size=1,
+                notify_end=True
+            )
+            dataloader_eval = DataLoader(
+                dataset_eval,
+                batch_size=1,
+                num_workers=0,
+                drop_last=False,
+                collate_fn=IPADataCollator(processor),
+            )
+            
             evaluater = IPAModelEvaluator(
+                dataloader=dataloader_eval,
                 processor=processor,
                 model=model,
                 device=config['device'],
-                **config['eval_dataset'],
             )
             
             logger.info(f"\nmodel: {config['models'][i]}")
