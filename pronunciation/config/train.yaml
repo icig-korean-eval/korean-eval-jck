@@ -21,18 +21,18 @@ data_loader:
 
 batch_size: 10
 total_iter: 12000000
-accumulation_steps: 64
+accumulation_steps: 120
 print_steps: 8000
 eval_steps: 100000
 save_steps: 50000
 
-max_queue_size: 50000
+max_queue_size: 40000
 refill_threshold: 10000
 chunk_size: 40000
 
 optimizer_vale:
   lr: 1.0e-5
-  weight_decay: 5.0e-3
+  weight_decay: 1.0e-7
 
 trainer:
   freeze_feature_extractor: true

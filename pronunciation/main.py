@@ -24,6 +24,7 @@ from logger.logger import DefaultLogger
 def parse_config():
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, default='train', help='train: 학습, test: 테스트')
+    parser.add_argument('--gpu', action='store_true', help='gpu')
     parser.add_argument('--pretrained_path', type=str, help='pretrained teset')
     args = parser.parse_args()
     
@@ -52,7 +53,7 @@ def parse_config():
         yaml.safe_dump(config, f)
         
     config['mode'] = args.mode
-    config['device'] = "cpu"
+    config['device'] = "cuda" if args.gpu and torch.cuda.is_available() else "cpu"
     
     return config
 

@@ -68,3 +68,5 @@ class IPAModelEvaluator:
         
         score = cer.compute(predictions=predictions, references=references)
         self.logger.info(f"CER (Character Error Rate): {score:.4f}")
+        
+        del predictions, references

@@ -56,7 +56,7 @@ class StreamingDatasetQueue(IterableDataset):
         
         if self.label_y is not None:
             df["label_len"] = df[self.label_y].apply(len)
-            df = df[df['label_len'] > 3].sort_values("label_len").drop(columns=["label_len"])
+            df = df[df['label_len'] > 10].sort_values("label_len").drop(columns=["label_len"])
         
         total = len(df)
         remainder = total % self.batch_size
