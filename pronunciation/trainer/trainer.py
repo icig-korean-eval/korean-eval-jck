@@ -34,6 +34,7 @@ class IPAModelTrainer:
                  eval_steps: int = 4000,
                  save_steps: int = 4000,
                  save_path: str = './save',
+                 loop: bool = False,
                  **kwargs):
         self.logger = DefaultLogger()
         self.dataloader = dataloader
@@ -51,6 +52,7 @@ class IPAModelTrainer:
         self.eval_steps = eval_steps
         self.save_steps = save_steps
         self.save_path = save_path
+        self.loop = loop
         
         if self.freeze_feature_extractor:
             self.model.freeze_feature_extractor()
@@ -72,7 +74,6 @@ class IPAModelTrainer:
         save_path = os.path.join(self.save_path, iter_name)
         os.makedirs(save_path, exist_ok=True)
 
-        # 4. 모델과 processor 저장
         self.model.save_pretrained(os.path.join(save_path, 'model'))
         self.processor.save_pretrained(os.path.join(save_path, 'processor'))
         self.tokenizer.save_pretrained(os.path.join(save_path, 'tokenizer'))
@@ -84,42 +85,87 @@ class IPAModelTrainer:
         self.logger.info(f"saved: {save_path}")
     
     
+    def __get_batch_data(self, batch):
+        input_values = batch["input_values"].to(self.device)
+        labels = batch["labels"].to(self.device)
+        attention_mask = batch["attention_mask"].to(self.device)
+        return input_values, labels, attention_mask
+    
+    
+    def __update_model(self, input_values, attention_mask, labels, iter, last_batch=False, last_batch_section=False, remain=1):
+        outputs = self.model(input_values=input_values, attention_mask=attention_mask, labels=labels)
+        loss = outputs.loss
+        
+        if not self.loop and last_batch_section:
+            loss = loss / remain
+        else:
+            loss = loss / self.accumulation_steps
+        loss.backward()
+        
+        if iter % self.accumulation_steps == 0 or (last_batch and last_batch_section):
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.8)
+            self.optimizer.step()
+            # if self.loop:
+            self.lr_scheduler.step()
+            self.optimizer.zero_grad()
+        return loss.item() / self.print_steps
+    
+    
+    def __save_best_cer(self, cer, iter):
+        if self.best_cer > cer:
+            self.__save_checkpoint(iter)
+            self.best_cer = cer
+    
+    
     def train(self):
         avg_loss = 0
-        for iter in range(1, self.total_iter + 1):
-            self.model.train()
-            
-            batch = next(self.infinite_loader)
+        self.best_cer = 0.5
+        if self.loop:
+            for iter in range(1, self.total_iter + 1):
+                self.model.train()
                 
-            input_values = batch["input_values"].to(self.device)
-            labels = batch["labels"].to(self.device)
-            attention_mask = batch["attention_mask"].to(self.device)
+                batch = next(self.infinite_loader)
+                    
+                input_values, labels, attention_mask = self.__get_batch_data(batch)
 
-            outputs = self.model(input_values=input_values, attention_mask=attention_mask, labels=labels)
-            loss = outputs.loss
-            loss = loss / self.accumulation_steps
-            loss.backward()
-            
-            if iter % self.accumulation_steps == 0:
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.8)
-                self.optimizer.step()
-                self.lr_scheduler.step()
-                self.optimizer.zero_grad()
-                
-            avg_loss += loss.item() / self.print_steps
+                loss = self.__update_model(input_values, attention_mask, labels, iter)
+                avg_loss += loss
 
-            if iter % self.print_steps == 0:
-                self.logger.debug(f"[{iter}/{self.total_iter}]\tloss: {avg_loss:.4f}\tlr: {self.lr_scheduler.get_lr()[0]}")
-                avg_loss = 0
+                if iter % self.print_steps == 0:
+                    self.logger.debug(f"[{iter}/{self.total_iter}]\tloss: {avg_loss:.4f}\tlr: {self.lr_scheduler.get_lr()[0]}")
+                    avg_loss = 0
+                    
+                if iter % self.eval_steps == 0 and self.evaluator is not None:
+                    self.evaluator.evaluate_cer()
+                    
+                if iter % self.save_steps == 0:
+                    self.__save_checkpoint(iter)
                 
-            if iter % self.eval_steps == 0 and self.evaluator is not None:
-                self.evaluator.evaluate_cer()
+                del batch["input_values"], batch["labels"], batch["attention_mask"], batch["input_lengths"], batch["label_lengths"]
+        else:
+            for epoch in range(1, self.total_iter + 1):
+                for iter, batch in tqdm(enumerate(self.dataloader, start=1), total=len(self.dataloader), ncols=0, desc='train'):
+                    last_batch = iter == len(self.dataloader)
+                    last_batch_section = iter > (len(self.dataloader) // self.accumulation_steps * self.accumulation_steps)
+                    self.model.train()
+                        
+                    input_values, labels, attention_mask = self.__get_batch_data(batch)
+
+                    loss = self.__update_model(input_values, attention_mask, labels, iter, last_batch, last_batch_section, len(self.dataloader) % self.accumulation_steps)
+                    avg_loss += loss
+
+                    if iter % self.print_steps == 0:
+                        self.logger.debug(f"[{epoch}/{self.total_iter}] [{iter}/{len(self.dataloader)}]\tloss: {avg_loss:.4f}\tlr: {self.lr_scheduler.get_lr()[0]}")
+                        avg_loss = 0
+                    
+                    del batch["input_values"], batch["labels"], batch["attention_mask"], batch["input_lengths"], batch["label_lengths"]
+                    
+                # if not self.loop:
+                #     self.lr_scheduler.step()
                 
-            if iter % self.save_steps == 0:
-                self.__save_checkpoint(iter)
-            
-            del batch["input_values"], batch["labels"], batch["attention_mask"], batch["input_lengths"], batch["label_lengths"]
+                cer = self.evaluator.evaluate_cer()
+                self.__save_best_cer(cer, epoch)
         
         if self.evaluator is not None:
             self.evaluator.evaluate_cer()
-        self.__save_checkpoint(iter)
+        self.__save_checkpoint()

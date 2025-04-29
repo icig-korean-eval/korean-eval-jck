@@ -19,12 +19,14 @@ class IPAModelEvaluator:
                  dataloader: torch.utils.data.DataLoader,
                  processor: transformers.processing_utils.ProcessorMixin,
                  model: torch.nn.Module,
-                 device: str = 'cpu',):
+                 device: str = 'cpu',
+                 loop: bool = False,):
         self.logger = DefaultLogger()
         self.dataloader = dataloader
         self.processor = processor
         self.model = model
         self.device = device
+        self.loop = loop
         
         self.model = self.model.to(device)
     
@@ -70,3 +72,4 @@ class IPAModelEvaluator:
         self.logger.info(f"CER (Character Error Rate): {score:.4f}")
         
         del predictions, references
+        return score

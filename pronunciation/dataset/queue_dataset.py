@@ -28,9 +28,12 @@ class StreamingDatasetQueue(IterableDataset):
                  max_queue_size: int=64,
                  refill_threshold: int=16,
                  chunk_size: int=64,
-                 notify_end=False):
+                 notify_end=False,
+                 loop=False):
         super().__init__()
         self.logger = DefaultLogger()
+        self.loop = loop
+        
         self.processor = processor
         self.max_queue_size = max_queue_size
         self.refill_threshold = refill_threshold
@@ -59,9 +62,11 @@ class StreamingDatasetQueue(IterableDataset):
             df = df[df['label_len'] > 10].sort_values("label_len").drop(columns=["label_len"])
         
         total = len(df)
-        remainder = total % self.batch_size
-        if remainder != 0:
-            df = df.iloc[:total - remainder].reset_index(drop=True)
+        if self.loop:
+            remainder = total % self.batch_size
+            if remainder != 0:
+                df = df.iloc[:total - remainder].reset_index(drop=True)
+        # df = df.iloc[:4043].reset_index(drop=True)
         
         self.logger.info(f'data size: {df.shape}')
         
@@ -92,9 +97,11 @@ class StreamingDatasetQueue(IterableDataset):
         return data
 
     def _refill_queue(self):
-        self.logger.debug(f'refill data: {self.cursor}\tapproximate remain: {self.q.qsize()}')
         with self.lock:
             end = min(self.cursor + self.chunk_size, self.data_len)
+            if self.cursor == end:
+                return
+            self.logger.debug(f'refill data: {self.cursor}\tapproximate remain: {self.q.qsize()}')
             for i in range(self.cursor, end):
                 item = self._load_data(
                     file=os.path.join(self.sound_path_prefix, self.data_index[i][0]),
@@ -104,12 +111,15 @@ class StreamingDatasetQueue(IterableDataset):
                     self.logger.error(f'length error - idx: {i}')
                     continue
                 self.q.put(item)
-            if end < self.data_len:
-                self.cursor = end
+            if self.loop:
+                if end < self.data_len:
+                    self.cursor = end
+                else:
+                    self.cursor = 0
+                    if self.notify_end:
+                        self.q.put('end')
             else:
-                self.cursor = 0
-                if self.notify_end:
-                    self.q.put('end')
+                self.cursor = end
 
     def _start_loading_thread(self):
         def _run():
@@ -120,12 +130,26 @@ class StreamingDatasetQueue(IterableDataset):
 
         t = threading.Thread(target=_run, daemon=True)
         t.start()
+        
+    def _reset(self):
+        with self.lock:
+            self.cursor = 0
+            self.q = queue.Queue(maxsize=self.max_queue_size)
 
     def __iter__(self):
-        while True:
-            item = self.q.get()
-            yield item
-            del item
+        if self.loop:
+            while True:
+                item = self.q.get()
+                yield item
+                del item
+        else:
+            try:
+                for _ in range(self.data_len):
+                    item = self.q.get()
+                    yield item
+                    del item
+            finally:
+                self._reset()
             
     def __len__(self):
         return self.data_len

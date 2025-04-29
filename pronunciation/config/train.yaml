@@ -8,21 +8,22 @@ train_dataset:
   audio_path: "."
   x: "soundpath"
   y: "script.text.ipa_array"
+  loop: false
 
 eval_dataset:
   path: "../data/korean/preprocessed_test.pickle"
   audio_path: "."
   x: "soundpath"
   y: "script.text.ipa_array"
+  loop: true
 
 data_loader:
   num_workers: 0
-  drop_last: true
 
 batch_size: 10
-total_iter: 12000000
+total_iter: 30
 accumulation_steps: 120
-print_steps: 8000
+print_steps: 5000
 eval_steps: 100000
 save_steps: 50000
 

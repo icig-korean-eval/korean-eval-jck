@@ -17,6 +17,7 @@ import os
 import yaml
 import argparse
 import datetime
+import math
 
 from logger.logger import DefaultLogger
 
@@ -64,11 +65,14 @@ if __name__ == "__main__":
     logger.info(f'condig: {config}')
     
     if config['mode'] == 'train':
-        config['total_iter'] //= config['batch_size']
-        config['accumulation_steps'] //= config['batch_size']
+        if config['train_dataset']['loop']:
+            config['total_iter'] //= config['batch_size']
+            config['eval_steps'] //= config['batch_size']
+            config['save_steps'] //= config['batch_size']
+        else:
+            pass
         config['print_steps'] //= config['batch_size']
-        config['eval_steps'] //= config['batch_size']
-        config['save_steps'] //= config['batch_size']
+        config['accumulation_steps'] //= config['batch_size']
         
         tokenizer = Wav2Vec2CTCTokenizer(config['vocab_path'], unk_token="[UNK]", pad_token="[PAD]", word_delimiter_token=" ")
         feature_extractor = Wav2Vec2FeatureExtractor(feature_size=1, sampling_rate=16000, padding_value=0.0, do_normalize=False, return_attention_mask=False)
@@ -85,7 +89,8 @@ if __name__ == "__main__":
             max_queue_size=config['max_queue_size'],
             refill_threshold=config['refill_threshold'],
             chunk_size=config['chunk_size'],
-            batch_size=config['batch_size']
+            batch_size=config['batch_size'],
+            loop=config['train_dataset']['loop'],
         )
         dataset_eval = StreamingDatasetQueue(
             data_path=config['eval_dataset']['path'],
@@ -97,21 +102,22 @@ if __name__ == "__main__":
             refill_threshold=config['refill_threshold'],
             chunk_size=config['chunk_size'],
             batch_size=1,
-            notify_end=True
+            notify_end=True,
+            loop=config['eval_dataset']['loop'],
         )
         
         dataloader_train = DataLoader(
             dataset_train,
             batch_size=config['batch_size'],
             num_workers=config['data_loader']['num_workers'],
-            drop_last=config['data_loader']['drop_last'],
+            drop_last=config['train_dataset']['loop'],
             collate_fn=IPADataCollator(processor),
         )
         dataloader_eval = DataLoader(
             dataset_eval,
             batch_size=1,
             num_workers=0,
-            drop_last=False,
+            drop_last=config['eval_dataset']['loop'],
             collate_fn=IPADataCollator(processor),
         )
         
@@ -124,6 +130,14 @@ if __name__ == "__main__":
             eos_token_id=processor.tokenizer.eos_token_id,
         )
         
+        if config['train_dataset']['loop']:
+            config['scheduler_warmup_steps'] = len(dataset_train) * 2 // config['accumulation_steps'] // config['batch_size']
+            config['scheduler_steps'] = config['total_iter'] // config['accumulation_steps']
+        else:
+            steps_per_epoch = math.ceil(len(dataloader_train) / config['batch_size'] / config['accumulation_steps'])
+            config['scheduler_warmup_steps'] = steps_per_epoch * 2
+            config['scheduler_steps'] = steps_per_epoch
+        
         optimizer = torch.optim.AdamW(
             model.parameters(),
             lr=config['optimizer_vale']['lr'],
@@ -131,8 +145,8 @@ if __name__ == "__main__":
         )
         lr_scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_warmup_steps=len(dataset_train) * 2 // config['accumulation_steps'] // config['batch_size'],
-            num_training_steps=config['total_iter'] // config['accumulation_steps']
+            num_warmup_steps=config['scheduler_warmup_steps'],
+            num_training_steps=config['scheduler_steps']
         )
         
         evaluater = IPAModelEvaluator(
@@ -140,6 +154,7 @@ if __name__ == "__main__":
             processor=processor,
             model=model,
             device=config['device'],
+            loop=config['eval_dataset']['loop'],
         )
         
         trainer = IPAModelTrainer(
@@ -150,6 +165,7 @@ if __name__ == "__main__":
             tokenizer=tokenizer,
             lr_scheduler=lr_scheduler,
             evaluator=evaluater,
+            loop=config['train_dataset']['loop'],
             **config['trainer'],
             **config,
         )
@@ -172,13 +188,14 @@ if __name__ == "__main__":
                 refill_threshold=config['refill_threshold'],
                 chunk_size=config['chunk_size'],
                 batch_size=1,
-                notify_end=True
+                notify_end=True,
+                loop=config['eval_dataset']['loop'],
             )
             dataloader_eval = DataLoader(
                 dataset_eval,
                 batch_size=1,
                 num_workers=0,
-                drop_last=False,
+                drop_last=config['eval_dataset']['loop'],
                 collate_fn=IPADataCollator(processor),
             )
             
