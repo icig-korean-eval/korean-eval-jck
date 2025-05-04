@@ -1,21 +1,12 @@
 models:
-  - './save/2025-04-22_23-05-30/iter_2400'
-  - './save/2025-04-22_23-05-30/iter_4800'
-  - './save/2025-04-22_23-05-30/iter_7200'
-  - './save/2025-04-22_23-05-30/iter_9600'
-  - './save/2025-04-22_23-05-30/iter_12000'
-  - './save/2025-04-22_23-05-30/iter_14400'
-  - './save/2025-04-22_23-05-30/iter_16800'
-  - './save/2025-04-22_23-05-30/iter_19200'
-  - './save/2025-04-22_23-05-30/iter_21600'
-  - './save/2025-04-22_23-05-30/iter_24000'
-  - './save/2025-04-22_23-05-30/iter_26400'
-  - './save/2025-04-22_23-05-30/iter_28800'
+  - './save/2025-04-29_19-15-04/iter_29'
+  - './save/2025-04-29_19-15-04/iter_final'
 eval_dataset:
-  path: "../data/korean/preprocessed_test.pickle"
-  audio_path: "."
+  path: "../data/announcer/labeling/preprocessed_test.pickle"
+  audio_path: "../data/announcer/source"
   x: "soundpath"
   y: "script.text.ipa_array"
+  loop: true
 max_queue_size: 50000
 refill_threshold: 10000
 chunk_size: 40000

@@ -134,9 +134,9 @@ if __name__ == "__main__":
             config['scheduler_warmup_steps'] = len(dataset_train) * 2 // config['accumulation_steps'] // config['batch_size']
             config['scheduler_steps'] = config['total_iter'] // config['accumulation_steps']
         else:
-            steps_per_epoch = math.ceil(len(dataloader_train) / config['batch_size'] / config['accumulation_steps'])
+            steps_per_epoch = math.ceil(len(dataloader_train) / config['accumulation_steps'])
             config['scheduler_warmup_steps'] = steps_per_epoch * 2
-            config['scheduler_steps'] = steps_per_epoch
+            config['scheduler_steps'] = steps_per_epoch * config['total_iter']
         
         optimizer = torch.optim.AdamW(
             model.parameters(),
