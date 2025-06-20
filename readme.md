@@ -130,6 +130,12 @@
 - [일반 발화 버전](https://huggingface.co/icig/normal-korean-ipa-translation)
 
 
+## 기여
+
+- 김준철 - 100%
+  - 모든 작업 진행
+
+
 ## License
 
 This project is licensed under the Apache License 2.0.
