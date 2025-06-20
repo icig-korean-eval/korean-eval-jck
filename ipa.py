@@ -16,6 +16,7 @@ if __name__ == "__main__":
     # ]
     for o in [input('변환:')]:
         result = convert(o, rules_to_apply='pastcnovr', sep=' ', vebose=True)
+        print(result)
         print(f'original: {o}\nresult: {result['result']}')
         print()
         
