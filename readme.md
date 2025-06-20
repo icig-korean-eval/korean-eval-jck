@@ -69,7 +69,7 @@
 ### 학습 방식
 
 - 아나운서 버전, 일반적인 한국어 버전 모두 동일한 프로세스로 학습 진행
-- 자세한 학습 방식은 [여기](/pronunciation/readme.md) 참고
+- 자세한 학습 방식은 [pronunciation/readme.md](/pronunciation/readme.md) 참고
 
 
 ## 프로젝트 구조
