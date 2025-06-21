@@ -4,10 +4,12 @@ import logging
 
 
 class DefaultLogger:
+    # 클래스 변수로 싱글톤 인스턴스를 저장
     _instance = None
     _initialized = False
 
     def __new__(cls, *args, **kwargs):
+        # 인스턴스가 없을 경우에만 새로 생성 (싱글톤 패턴)
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -17,6 +19,7 @@ class DefaultLogger:
                  stream: bool = True,
                  file: bool = False,
                  path: str = './log'):
+        # 이미 초기화가 끝났다면 다시 초기화하지 않음
         if self._initialized: return
 
         self.logger_name = name
@@ -24,6 +27,7 @@ class DefaultLogger:
         self.logger = logging.getLogger(self.logger_name)
         self.logger.setLevel(logging.DEBUG)
 
+        # 콘솔 출력 핸들러 설정
         if stream:
             formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s")
             handler = logging.StreamHandler()
@@ -31,6 +35,7 @@ class DefaultLogger:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
+        # 파일 출력 핸들러 설정
         if file:
             formatter_file = logging.Formatter("%(asctime)s %(levelname)s:%(message)s")
             handler_file = logging.FileHandler(os.path.join(path, f'{self.logger_name}.log'))
@@ -40,6 +45,7 @@ class DefaultLogger:
 
         self._initialized = True
         
+        # 예외 발생 시 로그로 기록하는 예외 훅 설정
         def catch_exception(exc_type, exc_value, exc_traceback):
             if issubclass(exc_type, KeyboardInterrupt):
                 sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -55,6 +61,8 @@ class DefaultLogger:
         
         
     def __check_gpu_rank(self, gpu_rank: int) -> bool:
+        # 멀티 GPU 분산 학습 시 로그 출력 여부 결정 함수 (현재 무조건 True 반환)
+        # 현재는 멀티GPU를 사용하지 않으므로 항상 True
         return True
         if self.parallel == 0:
             return True
