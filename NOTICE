@@ -1,0 +1,23 @@
+NOTICE
+
+This project includes code and models based on the "facebook/wav2vec2" model
+provided by Meta AI and licensed under the Apache License, Version 2.0.
+ 
+https://huggingface.co/facebook/wav2vec2-base
+
+Modifications by K1A2:
+The model was fine-tuned to convert Korean speech audio
+into International Phonetic Alphabet (IPA) transcriptions using the following datasets:
+
+1. News Scripts and Anchor Speech Dataset (AI Hub)  
+   - A high-quality Korean speech dataset by professional announcers.  
+   - Source: https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71557  
+
+2. Korean Speech Dataset (AI Hub)  
+   - A general-purpose Korean speech dataset with various speakers and natural pronunciation.  
+   - Source: https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=&topMenu=&aihubDataSe=data&dataSetSn=123  
+
+These datasets were used to fine-tune the model to output IPA phoneme sequences corresponding to the Korean speech inputs.  
+The resulting model supports phonetic transcription tasks for both professional and general Korean speech.
+
+All modifications and usage comply with the terms of the original Apache 2.0 License.

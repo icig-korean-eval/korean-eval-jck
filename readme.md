@@ -1,78 +1,81 @@
-# 외국인 한국어 발음 평가를 위한 IPA 변환 시스템
+# IPA Conversion System for Evaluating Foreigners' Korean Pronunciation
 
-- 한글 문자열을 **국제 발음 기호(IPA)** 로 변환하는 기능
-  - [stannam/hangul_to_ipa](https://github.com/stannam/hangul_to_ipa?tab=MIT-1-ov-file) 코드 변형
-- 한글 음성 파일을 입력 받아 **IPA로 전사(transcription)** 하는 모델 파인튜닝
-  - 모델: [wav2vec2-base](https://huggingface.co/facebook/wav2vec2-base) 파인튜닝
-  - AI Hub에서 제공하는 데이터 활용
-    - 아나운서 버전: 
-    [뉴스 대본 및 앵커 음성 데이터](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71557)
-    - 일반 발화 버전: 
-        [한국어 음성](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=&topMenu=&aihubDataSe=data&dataSetSn=123)
+- Functionality to convert Korean text into **International Phonetic Alphabet (IPA)**
+  - Based on modified code from [stannam/hangul_to_ipa](https://github.com/stannam/hangul_to_ipa?tab=MIT-1-ov-file)
+- Fine-tuning a model that takes Korean audio files and **transcribes them into IPA**
+  - Model: Fine-tuned [wav2vec2-base](https://huggingface.co/facebook/wav2vec2-base)
+  - Data from AI Hub:
+    - Announcer version:  
+      [News Script and Anchor Speech Dataset](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71557)
+    - General speech version:  
+      [Korean Speech](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=&topMenu=&aihubDataSe=data&dataSetSn=123)
 
-## 프로젝트 개요
+## Project Overview
 
-외국인이 발음하는 한국인의 발음 정확도를 평가하기 위한 기준으로 외국인이 얼마나 한국인의 발음을 잘 알아듣게 따라했는지 평가하기로 정했습니다. 평가 방법은 원본 문장의 발음 기호와, 사용자가 말한 음성 파일을 들리는대로 발음기호로 변환하여 얼마나 일치하는지 비교하는 방식입니다. 그래서 한국어 문자열이 주어지면 여러 발음 법칙을 적용해서 발음 기호로 변환하는 기능과, 한국어 발화 음성파일을 발음기호로 변환하는 모델을 만들었습니다.
-
-
-## IPA 변환기
-
-- 한글 음성파일 IPA 기호 변환 모델 학습과 데일리 러닝을 위한 원본 문장 IPA 변환을 위해 한글 문자열이 주어지면 여러 발음 법칙을 적용한 IPA 변환 기능을 구현
-- [stannam/hangul_to_ipa](https://github.com/stannam/hangul_to_ipa)을 이용하여 구현
-
-### 기능 추가
-
-- 기존 프로젝트는 전사된 발음 기호가 음소 단위로 한 글자씩 출력되어 어떤 단어가 발음되는지 한눈에 알아보기 어려웠음.
-- 위 문제를 해결하기 위해 단어 단위로 발음 기호가 출력되도록 변경
-- 기능 추가 전 출력
-  - 입력: 나는 음성인식이 재밌어요 
-  - 출력: [n ɑ n ɯ n ɯ m s ʌ ŋ i n s i ɡ i dʑ ɛ m i s* ʌ jo]
-- 기능 추가 후 출력
-  - 입력: 나는 음성인식이 재밌어요 
-  - 출력: nɑnɯn ɯmsʌŋinsiɡi dʑɛmis*ʌjo
+To evaluate how accurately a foreigner can pronounce Korean words, we assess how intelligible their pronunciation is to native speakers. The evaluation compares the IPA transcription of the original sentence with the IPA transcription derived from the foreign speaker’s audio. Therefore, we implemented a system that can convert Korean text to IPA using various pronunciation rules, and another system that transcribes Korean speech to IPA.
 
 
-## 한국어 음성파일 IPA 전사 모델
+## IPA Converter
 
-외국인이 말하는 발음을 한국인 기준에서 평가하기 위해 외국인의 발음을 한국인 기준으로 학습한 모델로 들리는대로 IPA로 전사하는 모델
+- Converts Korean text to IPA using pronunciation rules for use in model training and during daily learning
+- Implemented based on [stannam/hangul_to_ipa](https://github.com/stannam/hangul_to_ipa)
 
-### 데이터셋
-
-#### 뉴스 대본 및 앵커 음성 데이터
-
-- 한국인의 아나운서 발음을 기준으로 IPA 발음기호 전사 모델 학습을 위해 사용
-- [데이터 다운로드](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71557)
-
-##### 데이터 분석
-
-- 전체 분량: 약 **1100시간** 음성-전사 텍스트 페어
-- 전체 용량: 약 **230GB**
-- 제한된 GPU 자원으로 인해 전체 데이터셋을 학습에 사용할 수는 없었으며, Validation으로 제공된 약 25GB 분량의 데이터만 학습에 활용
-- 기존 데이터셋에 존재하던 transcribe 텍스트를 IPA 변환기를 통해 IPA 데이터셋 구축
-- 최종적으로 한글 음성파일-IPA 페어 데이터셋 구축
-
-#### 한국어 음성
-
-- 일반적인 한국인의 표준어 발음을 기준으로 IPA 발음기호 전사 모델 학습을 위해 사용
-- [데이터 다운로드](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=&topMenu=&aihubDataSe=data&dataSetSn=123)
-
-##### 데이터 분석
-
-- 전체 분량: 약 **1000시간** 음성-전사 텍스트 페어
-- 전체 용량: 약 **72GB**
-- 모든 데이터셋을 이용하여 학습
-  - 데이터셋 대부분이 표준어를 사용하므로 별도의 선별 없이 모든 데이터셋을 활용 ([데이터 분석](https://www.mdpi.com/2076-3417/10/19/6936))
-- 기존 데이터셋에 존재하던 transcribe 텍스트를 IPA 변환기를 통해 IPA 데이터셋 구축
-- 최종적으로 한글 음성파일-IPA 페어 데이터셋 구축
+### Feature Improvements
 
 
-### 학습 방식
+- The original project output IPA as individual phonemes, making it hard to identify which words were pronounced
+- We modified the output to show IPA by word unit
 
-- 아나운서 버전, 일반적인 한국어 버전 모두 동일한 프로세스로 학습 진행
-- 자세한 학습 방식은 [pronunciation/readme.md](/pronunciation/readme.md) 참고
+- **Before modification:**
+  - Input: 나는 음성인식이 재밌어요  
+  - Output: `[n ɑ n ɯ n ɯ m s ʌ ŋ i n s i ɡ i dʑ ɛ m i s* ʌ jo]`
+
+- **After modification:**
+  - Input: 나는 음성인식이 재밌어요  
+  - Output: `nɑnɯn ɯmsʌŋinsiɡi dʑɛmis*ʌjo`
 
 
-## 프로젝트 구조
+## IPA Transcription Model for Korean Audio
+
+A model that transcribes foreign-accented Korean speech into IPA based on native Korean phonological norms.
+
+### Dataset
+
+#### News Script and Anchor Speech Dataset
+
+- Used to train the IPA transcription model based on professional announcer pronunciation
+- [Download Dataset](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71557)
+
+##### Dataset Analysis
+
+- Total duration: approx. **1100 hours** of audio-text pairs
+- Total size: approx. **230 GB**
+- Due to limited GPU resources, only the validation portion (~25 GB) was used for training
+- The original transcript text was converted into IPA using the IPA converter
+- Final dataset: audio-IPA paired dataset
+
+#### Korean Speech
+
+- Used to train a model based on standard Korean pronunciation
+- [Download Dataset](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=&topMenu=&aihubDataSe=data&dataSetSn=123)
+
+
+##### Dataset Analysis
+
+- Total duration: approx. **1000 hours** of audio-text pairs
+- Total size: approx. **72 GB**
+- All data used without filtering, as most speakers use standard Korean ([Data Source](https://www.mdpi.com/2076-3417/10/19/6936))
+- Transcripts were converted into IPA using the IPA converter
+- Final dataset: audio-IPA paired dataset
+
+
+### Training Method
+
+- Both the announcer and general speech versions were trained using the same process
+- For details, see [pronunciation/readme.md](/pronunciation/readme.md)
+
+
+## Project Structure
 
 ```text
 ├── ipa/
@@ -87,53 +90,53 @@
 └── ipa.py
 ```
 
-- `ipa/`: 한글 문자열을 **국제 발음 기호(IPA)**로 변환하는 기능을 구현한 패키지입니다.  
-  ➤ 자세한 내용은 [`ipa/readme.md`](ipa/readme.md) 참고
+- `ipa/`: A package that implements **Korean text to IPA conversion**  
+  ➤ See [`ipa/readme.md`](ipa/readme.md) for details
 
 - `pronunciation/`: 
   한국어 음성 파일을 IPA 기호로 **전사하는 Wav2Vec2 기반 모델**을 학습하는 패키지입니다.  
   ➤ 자세한 내용은 [`pronunciation/readme.md`](pronunciation/readme.md) 참고
 
 - `pronunciation-back/`: 
-  `pronunciation`의 구버전입니다. 최종 제출에는 사용되지 않아 설명은 생략합니다.
+  Legacy version of `pronunciation`. Not used in the final submission.
 
 - `analyze_annoncer_data.ipynb`: 
-  AI Hub의 **아나운서 음성 데이터셋**을 분석하고, 학습용으로 구성하는 Jupyter Notebook입니다.
+  Jupyter Notebook for analyzing and preparing the **Announcer Speech Dataset** from AI Hub
 
 - `analyze_korean_data.ipynb`: 
-  AI Hub의 **일반 한국어 음성 데이터셋**을 분석하고, 학습용으로 구성하는 Jupyter Notebook입니다.
+  Jupyter Notebook for analyzing and preparing the **Korean Speech Dataset** from AI Hub
 
 - `fine_tune_wav2vec2_for_english_asr_notebook.ipynb`: 
-  Wav2Vec2 모델을 파인튜닝하는 방법을 예시로 정리한 노트북입니다. *(설명 생략)*
+  A sample notebook demonstrating how to fine-tune Wav2Vec2 *(description omitted)*
 
 - `ipa.py`: 
-  IPA 변환 알고리즘을 실험적으로 수정하여 테스트하는 코드입니다.
+  Code for experimenting with IPA conversion algorithm modifications
 
 
 
-## 최종 성능 결과
+## Final Performance Results
 
-### 성능
+### Accuracy
 
-| 모델 버전         | 평가 데이터      | CER (문자 오류율) |
-|------------------|------------------|-------------------|
-| 아나운서 발화 버전 | 아나운서 발화     | **6.87%**         |
-| 아나운서 발화 버전 | 일반 발화         | **36%**         |
-| 일반 발화 버전     | 일반 발화         | **8.32%**         |
+| Model Version       | Evaluation Data     | CER (Character Error Rate) |
+|---------------------|---------------------|-----------------------------|
+| Announcer Version   | Announcer Speech    | **6.87%**                   |
+| Announcer Version   | General Speech      | **36%**                     |
+| General Version     | General Speech      | **8.32%**                   |
 
-- **아나운서 발화 버전**: 정확한 표준 발음을 학습하는 데 적합  
-- **일반 발화 버전**: 서울 표준에 가까운 자연스러운 발음 평가에 적합
+- **Announcer version**: Suitable for evaluating pronunciation accuracy against standard professional speech
+- **General version**: Suitable for evaluating natural speech closer to standard Seoul dialect
 
-### 모델
+### Models
 
-- [아나운서 발화 버전](https://huggingface.co/icig/announcer-korean-ipa-translation)
-- [일반 발화 버전](https://huggingface.co/icig/normal-korean-ipa-translation)
+- [Announcer Speech Version](https://huggingface.co/icig/announcer-korean-ipa-translation)
+- [General Speech Version](https://huggingface.co/icig/normal-korean-ipa-translation)
 
 
-## 기여
+## Contribution
 
-- 김준철 - 100%
-  - 모든 작업 진행
+- Juncheol Kim - 100%  
+  - Completed all work
 
 
 ## License
