@@ -37,7 +37,10 @@ import ipa.src.rules as rules
 
 
 def transcription_convention(convention: str):
-    # supported transcription conventions: ipa, yale, park
+    """
+    변환 방식(IPA, Yale, Park 등)을 받아 해당하는 ConversionTable을 반환.
+    지원되는 변환 형식: 'ipa', 'yale', 'park'
+    """
     convention = convention.lower()
     if convention not in ['ipa', 'yale', 'park']:
         raise ValueError(f"Your input {convention} is not supported.")
@@ -46,19 +49,22 @@ def transcription_convention(convention: str):
 
 def sanitize(word: str) -> str:
     """
-    converts all hanja 漢字 letters to hangul
-    and also remove any space in the middle of the word
+    입력 문자열 내의 한자(漢字)를 한글로 변환하고,
+    단어 중간의 공백을 제거하는 전처리 함수.
+    - 단어가 비어있으면 그대로 반환
+    - 한자가 없으면 그대로 반환
     """
-    if len(word) < 1:  # if empty input, no sanitize
+    if len(word) < 1:
         return word
 
     # word = word.replace(' ', '')
 
+    # 한자 위치 찾기 (\p{Han}은 유니코드 한자 블록)
     hanja_idx = [match.start() for match in re.finditer(r'\p{Han}', word)]
     if len(hanja_idx) == 0:  # if no hanja, no sanitize
         return word
 
-    from src.hanja_tools import hanja_cleaner  # import hanja_cleaner only when needed
+    from src.hanja_tools import hanja_cleaner
     r = hanja_cleaner(word, hanja_idx)
     return r
 
@@ -68,17 +74,38 @@ def convert(hangul: str,
             convention: str = 'ipa',
             sep: str = '',
             vebose=False) -> dict:
-    # the main function for IPA conversion
+    """
+    입력된 한글 문자열을 IPA 또는 Yale 등으로 변환하는 핵심 함수
+
+    Parameters:
+    - hangul: 변환할 한글 문자열
+    - rules_to_apply: 적용할 발음 규칙 문자열 (예: 'pastcnhovr')
+    - convention: 변환 규약 ('ipa', 'yale', 'park')
+    - sep: 출력 결과에서 음소를 구분할 구분자
+    - vebose: 중간 디버깅 출력 여부
+
+    Returns:
+    - result: 변환 결과를 담은 딕셔너리
+        {
+            'original': 원문 문자열,
+            'result': 전체 변환 결과,
+            'result_array': 변환된 음소 배열,
+            'words': 각 단어별 자모 및 음성기호 정보
+        }
+    """
+    
     if vebose:
         print(f"original: {hangul}")
 
     if len(hangul) < 1:  # if no content, then return no content
         return ""
     
+    # 원본 문자열 보존
     original = hangul
     
-    idx_to_str = dict()
-    str_to_idx = []
+    # 문자열 내 각 문자의 위치 기록
+    idx_to_str = dict() # 위치 - 문자
+    str_to_idx = [] # 문자 - 위치
     idx = 1
     for letter in hangul:
         if bool(re.match(r'^[가-힣]+$', letter)):
@@ -91,10 +118,14 @@ def convert(hangul: str,
         print(f'idx_to_str: {idx_to_str}')
         print(f'str_to_idx: {str_to_idx}')
 
-    # prepare
+    # 설정 초기화
     rules_to_apply = rules_to_apply.lower()
     CT_convention = transcription_convention(convention)
+    
+    # 전처리 (한자 - 한글 변환 등)
     hangul = sanitize(hangul)
+    
+    # Word 객체 생성 (자모 분리 등)
     word = Word(hangul=hangul)
     if vebose:
         print(f'hangul: {hangul}')
@@ -103,7 +134,7 @@ def convert(hangul: str,
         print(f'word cv: {word.cv}')
         print()
 
-    # resolve word-final consonant clusters right off the bat
+    # 시작 단계에서 자음군 단순화 처리
     rules.simplify_coda(word)
     if vebose:
         print(f'simplify word jamo: {word.jamo}')
@@ -111,14 +142,14 @@ def convert(hangul: str,
         print(f'simplify word cv: {word.cv}')
         print()
 
-    # apply rules
+    # 발음 규칙 적용
     word = rules.apply_rules(word, rules_to_apply)
     if vebose:
         print(f'rules word jamo: {word.jamo}')
         print(f'rules word cv: {word.cv}')
         print()
 
-    # high mid/back vowel merger after bilabial (only for the Yale convention)
+    # Yale 표기법일 경우, bilabial 뒤의 ㅜ - ㅡ로 교체하는 규칙 추가
     if CT_convention.name == 'yale' and 'u' in rules_to_apply:
         bilabials = list("ㅂㅃㅍㅁ")
         applied = list(word.jamo)
@@ -129,25 +160,27 @@ def convert(hangul: str,
     # print(f'CT_convention: {CT_convention}')
     # print()
 
-    # convert to IPA or Yale
+    # 자모를 음성기호(IPA 등)로 변환
     transcribed = rules.transcribe(word.jamo, CT_convention)
     if vebose:
         print(f'transcribed: {transcribed}')
         print()
         print()
 
-    # apply phonetic rules
+    # IPA의 경우, 음성학적 규칙 추가 적용 (유성음화 등)
     if CT_convention.name == 'ipa':
         transcribed = rules.apply_phonetics(transcribed, rules_to_apply)
     if vebose:
         print(f'transcribed ipa: {transcribed}')
         print()
         
+    # 결과 구성
     result = dict()
     result['original'] = original
     # result['result'] = sep.join(transcribed)
     
     idx = 0
+    # 각 단어별로 자모 및 변환 결과 정리
     result['words'] = dict()
     for k, v in idx_to_str.items():
         result['words'][k] = dict()
@@ -160,6 +193,7 @@ def convert(hangul: str,
             result['words'][k]['syllables']['transcript'].append(transcribed[idx])
             idx += 1
     
+    # 전체 문장 기준 변환 결과 조립
     result['result'] = ''
     result['result_array'] = []
     for s in str_to_idx:

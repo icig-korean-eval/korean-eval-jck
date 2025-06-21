@@ -29,18 +29,24 @@ import csv
 from ipa.src.hangul_tools import hangul_to_jamos, jamo_to_hangul
 from pathlib import Path
 
-HIGHV_DIPHTHONGS = ("ㅑ", "ㅕ", "ㅖ", "ㅛ", "ㅠ", "ㅣ")
+HIGHV_DIPHTHONGS = ("ㅑ", "ㅕ", "ㅖ", "ㅛ", "ㅠ", "ㅣ")  # 고모음 또는 반모음
 
 
 def realize_hanja(raw: str) -> str:
-    # convert the Unicode code point (e.g., U+349A) into actual hanja 㒚
-    stripped_raw = raw.strip('U+')  # 'U+' part is meaningless so strip
-    r = chr(int(stripped_raw, 16))  # hexadecimal part into int and then into character
+    """
+    한자의 유니코드 코드 포인트(U+XXXX 형태)를 실제 한자 문자로 변환하는 함수
+    예: 'U+349A' → '㒚'
+    """
+    stripped_raw = raw.strip('U+')  # 앞의 'U+' 문자열 제거
+    r = chr(int(stripped_raw, 16))  # 16진수 문자열을 정수로, 다시 문자로 변환
     return r
 
 
 def load_jajeon() -> dict:
-    # import a 漢字 - 한글 conversion table
+    """
+    한자-한글 독음 매핑 정보를 담은 사전(자전)을 불러오는 함수.
+    'tables/hanja.tsv' 파일을 기반으로 사전을 만듦.
+    """
     jajeon = {}
     jajeon_path = Path(__file__).parent.parent / 'tables' / 'hanja.tsv'
     with open(jajeon_path, newline='', encoding='utf-8') as f:
@@ -54,6 +60,10 @@ def load_jajeon() -> dict:
 
 
 def hanja_to_hangul(jajeon: dict, char:str) -> str:
+    """
+    단일 한자 문자(char)를 자전(jajeon)을 사용해 한글로 변환.
+    매핑이 없으면 원래 문자를 그대로 반환.
+    """
     try:
         r = jajeon[char]
     except KeyError:
@@ -62,8 +72,10 @@ def hanja_to_hangul(jajeon: dict, char:str) -> str:
 
 
 def initial_rule(char: str) -> str:
-    # apply the 'initial rule' (두음규칙) where 'l' becomes 'n' and 'n' gets deleted word-initially
-    # char: hangul character
+    """
+    두음법칙을 적용하여 초성 'ㄹ' → 'ㄴ', 또는 'ㄴ' → 'ㅇ'로 바꾸는 함수
+    예: "렬" → "녈", "녀" → "여"
+    """
     changed_flag = False
     jamos = hangul_to_jamos(char)
     jamos = ''.join(jamos)
@@ -84,6 +96,14 @@ def initial_rule(char: str) -> str:
 
 
 def hanja_cleaner(word: str, hanja_loc:list[int]) -> str:
+    """
+    문자열에서 특정 위치의 한자들을 한글로 변환하고,
+    필요시 두음법칙이나 특수 발음 규칙도 함께 적용하는 함수
+
+    :param word: 한자 및 한글이 섞인 문자열
+    :param hanja_loc: 한자가 포함된 위치 리스트 (예: [0,2])
+    :return: 한자 변환 및 규칙 적용된 한글 문자열
+    """
     jajeon = load_jajeon()
     chars = list(word)
 
