@@ -94,8 +94,8 @@ A model that transcribes foreign-accented Korean speech into IPA based on native
   ➤ See [`ipa/readme.md`](ipa/readme.md) for details
 
 - `pronunciation/`: 
-  한국어 음성 파일을 IPA 기호로 **전사하는 Wav2Vec2 기반 모델**을 학습하는 패키지입니다.  
-  ➤ 자세한 내용은 [`pronunciation/readme.md`](pronunciation/readme.md) 참고
+  A package for training a **Wav2Vec2-based model that transcribes Korean audio into IPA**  
+  ➤ See [`pronunciation/readme.md`](pronunciation/readme.md) for details
 
 - `pronunciation-back/`: 
   Legacy version of `pronunciation`. Not used in the final submission.
