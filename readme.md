@@ -135,7 +135,7 @@ A model that transcribes foreign-accented Korean speech into IPA based on native
 
 ## Contribution
 
-- Juncheol Kim - 100%  
+- Joonchul Kim - 100%  
   - Completed all work
 
 
